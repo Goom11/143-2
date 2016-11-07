@@ -132,7 +132,39 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
 
 RC SqlEngine::load(const string& table, const string& loadfile, bool index)
 {
-  /* your code here */
+    // Opens the RecordFile in write mode, and opens the loadfile.
+    RecordFile rf(table + ".tbl", 'w');
+    ifstream tableFile(loadfile.c_str());
+
+    if (tableFile.is_open())
+    {
+        string tuple;
+
+        // Reads every line of the loadfile into the tuple string.
+        while ( getline (tableFile,tuple) )
+        {
+            int key;
+            string value;
+
+            // If there is no parse error, write the values to the RecordFile
+            int resVal = parseLoadLine(tuple, key, value);
+            if (resVal == 0) {
+                RecordId rid;
+                rf.append(key, value, rid);
+
+            } else {
+                cout << "Error code: " << resVal << endl;
+                exit(1);
+            }
+
+        }
+        tableFile.close();
+    }
+    else {
+        cout << "Error loading from file: " << loadfile << endl;
+    }
+
+    rf.close();
 
   return 0;
 }
