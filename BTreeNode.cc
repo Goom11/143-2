@@ -291,6 +291,7 @@ RC BTNonLeafNode::insertAndSplit(int key, PageId pid, BTNonLeafNode& sibling, in
     }
 
     buffer.numKeys = half;
+    return 0;
 }
 
 /*
