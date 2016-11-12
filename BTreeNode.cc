@@ -1,4 +1,5 @@
 #include "BTreeNode.h"
+#include <cstring>
 
 using namespace std;
 
