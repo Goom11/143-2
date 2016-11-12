@@ -33,8 +33,29 @@ int BTLeafNode::getKeyCount()
  * @param rid[IN] the RecordId to insert
  * @return 0 if successful. Return an error code if the node is full.
  */
-RC BTLeafNode::insert(int key, const RecordId& rid)
-{ return 0; }
+RC BTLeafNode::insert(int key, const RecordId& rid) {
+    if (buffer.numKeyRecords == MAX_KEY_RECORDS) {
+        return RC_NODE_FULL;
+    }
+    BTNodeKeyRecord keyRecordToInsert = { key, rid };
+
+    int i = 0;
+    while (key > buffer.keyRecords[i].key) {
+        i++;
+    }
+    BTNodeKeyRecord temp = buffer.keyRecords[i];
+    buffer.keyRecords[i] = keyRecordToInsert;
+    while (i < buffer.numKeyRecords) {
+        i++;
+        BTNodeKeyRecord swap = buffer.keyRecords[i];
+        buffer.keyRecords[i] = temp;
+        temp = swap;
+    }
+    i++;
+    buffer.keyRecords[i] = temp;
+    buffer.numKeyRecords++;
+    return 0;
+}
 
 /*
  * Insert the (key, rid) pair to the node
