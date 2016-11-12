@@ -23,15 +23,17 @@ typedef struct {
 } BTNodeKeyRecord;
 
 typedef struct {
-    int numKeyRecords = 0;
+    int numKeyRecords;
     BTNodeKeyRecord keyRecords[MAX_KEY_RECORDS];
     PageId nextLeaf;
+    int padding[2];
 } BTLeafNodeBuffer;
 
 typedef struct {
-    int numKeys = 0;
+    int numKeys;
     PageId pageIds[MAX_KEYS + 1];
     int keys[MAX_KEYS];
+    int padding[2];
 } BTNonLeafNodeBuffer;
 
 /**

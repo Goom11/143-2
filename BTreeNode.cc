@@ -8,8 +8,9 @@ using namespace std;
  * @param pf[IN] PageFile to read from
  * @return 0 if successful. Return an error code if there is an error.
  */
-RC BTLeafNode::read(PageId pid, const PageFile& pf)
-{ return 0; }
+RC BTLeafNode::read(PageId pid, const PageFile& pf) {
+    return pf.read(pid, (void *) &buffer);
+}
     
 /*
  * Write the content of the node to the page pid in the PageFile pf.
@@ -17,15 +18,17 @@ RC BTLeafNode::read(PageId pid, const PageFile& pf)
  * @param pf[IN] PageFile to write to
  * @return 0 if successful. Return an error code if there is an error.
  */
-RC BTLeafNode::write(PageId pid, PageFile& pf)
-{ return 0; }
+RC BTLeafNode::write(PageId pid, PageFile& pf) {
+    return pf.write(pid, (const void *) &buffer);
+}
 
 /*
  * Return the number of keys stored in the node.
  * @return the number of keys in the node
  */
-int BTLeafNode::getKeyCount()
-{ return 0; }
+int BTLeafNode::getKeyCount() {
+    return buffer.numKeyRecords;
+}
 
 /*
  * Insert a (key, rid) pair to the node.
@@ -34,25 +37,28 @@ int BTLeafNode::getKeyCount()
  * @return 0 if successful. Return an error code if the node is full.
  */
 RC BTLeafNode::insert(int key, const RecordId& rid) {
-    if (buffer.numKeyRecords == MAX_KEY_RECORDS) {
+    if (getKeyCount() == MAX_KEY_RECORDS) {
         return RC_NODE_FULL;
     }
     BTNodeKeyRecord keyRecordToInsert = { key, rid };
 
-    int i = 0;
-    while (key > buffer.keyRecords[i].key) {
-        i++;
+    int i;
+    for(i = 0; i < getKeyCount() && key > buffer.keyRecords[i].key; i++) {
     }
-    BTNodeKeyRecord temp = buffer.keyRecords[i];
+
+    BTNodeKeyRecord temp[MAX_KEY_RECORDS];
+    memcpy(
+        temp,
+        buffer.keyRecords + i * sizeof(BTNodeKeyRecord),
+        (MAX_KEY_RECORDS - i) * sizeof(BTNodeKeyRecord)
+    );
     buffer.keyRecords[i] = keyRecordToInsert;
-    while (i < buffer.numKeyRecords) {
-        i++;
-        BTNodeKeyRecord swap = buffer.keyRecords[i];
-        buffer.keyRecords[i] = temp;
-        temp = swap;
-    }
-    i++;
-    buffer.keyRecords[i] = temp;
+    memcpy(
+        buffer.keyRecords + (i + 1) * sizeof(BTNodeKeyRecord),
+        temp,
+        (MAX_KEY_RECORDS - (i + 1)) * sizeof(BTNodeKeyRecord)
+    );
+
     buffer.numKeyRecords++;
     return 0;
 }
@@ -68,8 +74,33 @@ RC BTLeafNode::insert(int key, const RecordId& rid) {
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::insertAndSplit(int key, const RecordId& rid, 
-                              BTLeafNode& sibling, int& siblingKey)
-{ return 0; }
+                              BTLeafNode& sibling, int& siblingKey) {
+    if (getKeyCount() == 0) {
+        return insert(key, rid);
+    }
+    if (getKeyCount() == 1) {
+        if (key > buffer.keyRecords[0].key) {
+            siblingKey = key;
+            return sibling.insert(key, rid);
+        }
+        BTNodeKeyRecord greaterKeyRecord = buffer.keyRecords[0];
+        buffer.keyRecords[0] = { key, rid };
+        siblingKey = greaterKeyRecord.key;
+        return sibling.insert(greaterKeyRecord.key, greaterKeyRecord.rid);
+    }
+    int half = getKeyCount() / 2;
+    int halfKey = buffer.keyRecords[half].key;
+    siblingKey = buffer.keyRecords[half + 1].key;
+    for (int i = half + 1; i < getKeyCount(); i++) {
+        BTNodeKeyRecord keyRecord = buffer.keyRecords[i];
+        RC error = sibling.insert(keyRecord.key, keyRecord.rid);
+        if (error != 0) {
+            return error;
+        }
+    }
+    buffer.numKeyRecords = half + 1;
+    return key > halfKey ? sibling.insert(key, rid) : insert(key, rid);
+}
 
 /**
  * If searchKey exists in the node, set eid to the index entry
@@ -82,8 +113,12 @@ RC BTLeafNode::insertAndSplit(int key, const RecordId& rid,
                    behind the largest key smaller than searchKey.
  * @return 0 if searchKey is found. Otherwise return an error code.
  */
-RC BTLeafNode::locate(int searchKey, int& eid)
-{ return 0; }
+RC BTLeafNode::locate(int searchKey, int& eid) {
+    for(eid = 0;
+        eid < getKeyCount() && searchKey < buffer.keyRecords[eid].key;
+        eid++) { }
+    return searchKey == buffer.keyRecords[eid].key ? 0 : RC_NO_SUCH_RECORD;
+}
 
 /*
  * Read the (key, rid) pair from the eid entry.
@@ -92,23 +127,32 @@ RC BTLeafNode::locate(int searchKey, int& eid)
  * @param rid[OUT] the RecordId from the entry
  * @return 0 if successful. Return an error code if there is an error.
  */
-RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
-{ return 0; }
+RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid) {
+    if (eid < 0 || eid >= getKeyCount()) {
+        return RC_NO_SUCH_RECORD;
+    }
+    key = buffer.keyRecords[eid].key;
+    rid = buffer.keyRecords[eid].rid;
+    return 0;
+}
 
 /*
  * Return the pid of the next slibling node.
  * @return the PageId of the next sibling node 
  */
-PageId BTLeafNode::getNextNodePtr()
-{ return 0; }
+PageId BTLeafNode::getNextNodePtr() {
+    return buffer.nextLeaf;
+}
 
 /*
  * Set the pid of the next slibling node.
  * @param pid[IN] the PageId of the next sibling node 
  * @return 0 if successful. Return an error code if there is an error.
  */
-RC BTLeafNode::setNextNodePtr(PageId pid)
-{ return 0; }
+RC BTLeafNode::setNextNodePtr(PageId pid) {
+    buffer.nextLeaf = pid;
+    return 0;
+}
 
 /*
  * Read the content of the node from the page pid in the PageFile pf.
@@ -116,8 +160,9 @@ RC BTLeafNode::setNextNodePtr(PageId pid)
  * @param pf[IN] PageFile to read from
  * @return 0 if successful. Return an error code if there is an error.
  */
-RC BTNonLeafNode::read(PageId pid, const PageFile& pf)
-{ return 0; }
+RC BTNonLeafNode::read(PageId pid, const PageFile& pf) {
+    return pf.read(pid, (void *) &buffer);
+}
     
 /*
  * Write the content of the node to the page pid in the PageFile pf.
@@ -125,8 +170,9 @@ RC BTNonLeafNode::read(PageId pid, const PageFile& pf)
  * @param pf[IN] PageFile to write to
  * @return 0 if successful. Return an error code if there is an error.
  */
-RC BTNonLeafNode::write(PageId pid, PageFile& pf)
-{ return 0; }
+RC BTNonLeafNode::write(PageId pid, PageFile& pf) {
+    return pf.write(pid, (const void *) &buffer);
+}
 
 /*
  * Return the number of keys stored in the node.
