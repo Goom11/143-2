@@ -178,8 +178,9 @@ RC BTNonLeafNode::write(PageId pid, PageFile& pf) {
  * Return the number of keys stored in the node.
  * @return the number of keys in the node
  */
-int BTNonLeafNode::getKeyCount()
-{ return 0; }
+int BTNonLeafNode::getKeyCount() {
+    return buffer.numKeys;
+}
 
 
 /*
@@ -188,8 +189,41 @@ int BTNonLeafNode::getKeyCount()
  * @param pid[IN] the PageId to insert
  * @return 0 if successful. Return an error code if the node is full.
  */
-RC BTNonLeafNode::insert(int key, PageId pid)
-{ return 0; }
+RC BTNonLeafNode::insert(int key, PageId pid) {
+    int i;
+    for(i = 0; i < getKeyCount() && key > buffer.keys[i]; i++) {
+    }
+
+    int temp[MAX_KEYS];
+    memcpy(
+        temp,
+        buffer.keys + i * sizeof(int),
+        (MAX_KEYS - i) * sizeof(int)
+    );
+    buffer.keys[i] = key;
+    memcpy(
+            buffer.keys + (i + 1) * sizeof(int),
+            temp,
+            (MAX_KEYS - (i + 1)) * sizeof(int)
+    );
+    buffer.numKeys++;
+
+    i++;
+    PageId tempPageIds[MAX_KEYS + 1];
+    memcpy(
+            tempPageIds,
+            buffer.pageIds + i * sizeof(PageId),
+            ((MAX_KEYS + 1) - i) * sizeof(PageId)
+    );
+    buffer.pageIds[i] = pid;
+    memcpy(
+            buffer.pageIds + (i + 1) * sizeof(PageId),
+            tempPageIds,
+            ((MAX_KEYS + 1) - (i + 1)) * sizeof(PageId)
+    );
+
+    return 0;
+}
 
 /*
  * Insert the (key, pid) pair to the node
