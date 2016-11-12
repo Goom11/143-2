@@ -40,7 +40,9 @@ RC BTLeafNode::insert(int key, const RecordId& rid) {
     if (getKeyCount() == MAX_KEY_RECORDS) {
         return RC_NODE_FULL;
     }
-    BTNodeKeyRecord keyRecordToInsert = { key, rid };
+    BTNodeKeyRecord keyRecordToInsert;
+    keyRecordToInsert.key = key;
+    keyRecordToInsert.rid = rid;
 
     int i;
     for(i = 0; i < getKeyCount() && key > buffer.keyRecords[i].key; i++) {
@@ -84,7 +86,8 @@ RC BTLeafNode::insertAndSplit(int key, const RecordId& rid,
             return sibling.insert(key, rid);
         }
         BTNodeKeyRecord greaterKeyRecord = buffer.keyRecords[0];
-        buffer.keyRecords[0] = { key, rid };
+        buffer.keyRecords[0].key = key;
+        buffer.keyRecords[0].rid = rid;
         siblingKey = greaterKeyRecord.key;
         return sibling.insert(greaterKeyRecord.key, greaterKeyRecord.rid);
     }
