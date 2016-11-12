@@ -13,20 +13,25 @@
 #include "RecordFile.h"
 #include "PageFile.h"
 
+
+const int maxKeyRecords = 84;
+const int maxKeys = 126;
+
 typedef struct {
     int key;
     RecordId rid;
 } BTNodeKeyRecord;
 
 typedef struct {
-    BTNodeKeyRecord keyRecords[85];
+    int numKeys = 0;
+    BTNodeKeyRecord keyRecords[maxKeyRecords];
     PageId nextLeaf;
 } BTLeafNodeBuffer;
 
-
 typedef struct {
-    PageId pageIds[128];
-    int keys[127];
+    int numKeys = 0;
+    PageId pageIds[maxKeys + 1];
+    int keys[maxKeys];
 } BTNonLeafNodeBuffer;
 
 /**
