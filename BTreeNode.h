@@ -18,6 +18,11 @@ typedef struct {
     RecordId rid;
 } BTNodeKeyRecord;
 
+typedef struct {
+    BTNodeKeyRecord keyRecords[85];
+    PageId nextLeaf;
+} BTLeafNodeBuffer;
+
 /**
  * BTLeafNode: The class representing a B+tree leaf node.
  */
