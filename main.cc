@@ -16,6 +16,7 @@ int main()
 {
   printf("%lu\n", sizeof(BTNodeKeyRecord));
   printf("%lu\n", sizeof(BTLeafNodeBuffer));
+  printf("%lu\n", sizeof(BTNonLeafNodeBuffer));
 
   // run the SQL engine taking user commands from standard input (console).
   SqlEngine::run(stdin);

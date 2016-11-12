@@ -23,6 +23,12 @@ typedef struct {
     PageId nextLeaf;
 } BTLeafNodeBuffer;
 
+
+typedef struct {
+    PageId pageIds[128];
+    int keys[127];
+} BTNonLeafNodeBuffer;
+
 /**
  * BTLeafNode: The class representing a B+tree leaf node.
  */
@@ -113,8 +119,9 @@ class BTLeafNode {
     * The main memory buffer for loading the content of the disk page 
     * that contains the node.
     */
-    char buffer[PageFile::PAGE_SIZE];
-}; 
+    // char buffer[PageFile::PAGE_SIZE];
+    BTLeafNodeBuffer buffer;
+};
 
 
 /**
@@ -191,7 +198,8 @@ class BTNonLeafNode {
     * The main memory buffer for loading the content of the disk page 
     * that contains the node.
     */
-    char buffer[PageFile::PAGE_SIZE];
+    // char buffer[PageFile::PAGE_SIZE];
+    BTNonLeafNodeBuffer buffer;
 }; 
 
 #endif /* BTREENODE_H */
