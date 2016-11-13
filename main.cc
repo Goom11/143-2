@@ -9,6 +9,7 @@
  
 #include "Bruinbase.h"
 #include "SqlEngine.h"
+#include <cstdio>
 
 int main()
 {
