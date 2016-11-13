@@ -1,7 +1,12 @@
-#include "BTreeNode.h"
 #include <cstring>
+#include "BTreeNode.h"
 
 using namespace std;
+
+BTLeafNode::BTLeafNode() {
+    buffer.numKeyRecords = 0;
+    buffer.nextLeaf = -1;
+}
 
 /*
  * Read the content of the node from the page pid in the PageFile pf.
@@ -52,12 +57,12 @@ RC BTLeafNode::insert(int key, const RecordId& rid) {
     BTNodeKeyRecord temp[MAX_KEY_RECORDS];
     memcpy(
         temp,
-        buffer.keyRecords + i * sizeof(BTNodeKeyRecord),
+        buffer.keyRecords + i,
         (MAX_KEY_RECORDS - i) * sizeof(BTNodeKeyRecord)
     );
     buffer.keyRecords[i] = keyRecordToInsert;
     memcpy(
-        buffer.keyRecords + (i + 1) * sizeof(BTNodeKeyRecord),
+        buffer.keyRecords + (i + 1),
         temp,
         (MAX_KEY_RECORDS - (i + 1)) * sizeof(BTNodeKeyRecord)
     );
@@ -119,9 +124,9 @@ RC BTLeafNode::insertAndSplit(int key, const RecordId& rid,
  */
 RC BTLeafNode::locate(int searchKey, int& eid) {
     for(eid = 0;
-        eid < getKeyCount() && searchKey < buffer.keyRecords[eid].key;
+        eid < getKeyCount() && searchKey > buffer.keyRecords[eid].key;
         eid++) { }
-    return searchKey == buffer.keyRecords[eid].key ? 0 : RC_NO_SUCH_RECORD;
+    return searchKey == buffer.keyRecords[eid].key && eid != getKeyCount() ? 0 : RC_NO_SUCH_RECORD;
 }
 
 /*
@@ -156,6 +161,10 @@ PageId BTLeafNode::getNextNodePtr() {
 RC BTLeafNode::setNextNodePtr(PageId pid) {
     buffer.nextLeaf = pid;
     return 0;
+}
+
+BTNonLeafNode::BTNonLeafNode(){
+    buffer.numKeys = 0;
 }
 
 /*
@@ -194,6 +203,9 @@ int BTNonLeafNode::getKeyCount() {
  * @return 0 if successful. Return an error code if the node is full.
  */
 RC BTNonLeafNode::insert(int key, PageId pid) {
+    if (getKeyCount() == MAX_KEYS)
+        return  RC_NODE_FULL;
+
     int i;
     for(i = 0; i < getKeyCount() && key > buffer.keys[i]; i++) {
     }
@@ -201,12 +213,12 @@ RC BTNonLeafNode::insert(int key, PageId pid) {
     int temp[MAX_KEYS];
     memcpy(
         temp,
-        buffer.keys + i * sizeof(int),
+        buffer.keys + i,
         (MAX_KEYS - i) * sizeof(int)
     );
     buffer.keys[i] = key;
     memcpy(
-            buffer.keys + (i + 1) * sizeof(int),
+            buffer.keys + (i + 1),
             temp,
             (MAX_KEYS - (i + 1)) * sizeof(int)
     );
@@ -216,12 +228,12 @@ RC BTNonLeafNode::insert(int key, PageId pid) {
     PageId tempPageIds[MAX_KEYS + 1];
     memcpy(
             tempPageIds,
-            buffer.pageIds + i * sizeof(PageId),
+            buffer.pageIds + i,
             ((MAX_KEYS + 1) - i) * sizeof(PageId)
     );
     buffer.pageIds[i] = pid;
     memcpy(
-            buffer.pageIds + (i + 1) * sizeof(PageId),
+            buffer.pageIds + (i + 1),
             tempPageIds,
             ((MAX_KEYS + 1) - (i + 1)) * sizeof(PageId)
     );
@@ -271,14 +283,16 @@ RC BTNonLeafNode::insertAndSplit(int key, PageId pid, BTNonLeafNode& sibling, in
     int half = getKeyCount() / 2;
     midKey = buffer.keys[half];
 
-    if (buffer.keys[half + 1] > key && buffer.keys[half] < key) {
-        sibling.initializeRoot(buffer.pageIds[half + 1], key, pid);
+    if (midKey > key) {
+        sibling.initializeRoot(buffer.pageIds[half + 1], buffer.keys[half + 1], buffer.pageIds[half + 2]);
         for (int i = half + 1; i < getKeyCount(); i++) {
             int error = sibling.insert(buffer.keys[i], buffer.pageIds[i + 1]);
             if (error != 0) {
                 return error;
             }
         }
+        buffer.numKeys = half;
+        insert(key, pid);
     } else {
         sibling.initializeRoot(buffer.pageIds[half + 1], buffer.keys[half + 1], buffer.pageIds[half + 2]);
         sibling.insert(key, pid);
@@ -288,9 +302,9 @@ RC BTNonLeafNode::insertAndSplit(int key, PageId pid, BTNonLeafNode& sibling, in
                 return error;
             }
         }
+        buffer.numKeys = half;
     }
 
-    buffer.numKeys = half;
     return 0;
 }
 
