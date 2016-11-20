@@ -16,6 +16,8 @@
 
 const int MAX_KEY_RECORDS = 84;
 const int MAX_KEYS = 126;
+const int IS_LEAF = 0;
+const int IS_NODE = 1;
 
 typedef struct {
     int key;
@@ -26,14 +28,14 @@ typedef struct {
     int numKeyRecords;
     BTNodeKeyRecord keyRecords[MAX_KEY_RECORDS];
     PageId nextLeaf;
-    int padding[2];
+    int flags[2];
 } BTLeafNodeBuffer;
 
 typedef struct {
     int numKeys;
     PageId pageIds[MAX_KEYS + 1];
     int keys[MAX_KEYS];
-    int padding[2];
+    int flags[2];
 } BTNonLeafNodeBuffer;
 
 /**

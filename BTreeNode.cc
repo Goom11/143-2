@@ -3,9 +3,12 @@
 
 using namespace std;
 
+
+
 BTLeafNode::BTLeafNode() {
     buffer.numKeyRecords = 0;
     buffer.nextLeaf = -1;
+    buffer.flags[0] = IS_LEAF;
 }
 
 /*
@@ -15,7 +18,14 @@ BTLeafNode::BTLeafNode() {
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::read(PageId pid, const PageFile& pf) {
-    return pf.read(pid, (void *) &buffer);
+    RC pfRC = pf.read(pid, (void *) &buffer);
+    if (pfRC != 0) {
+        return pfRC;
+    }
+    if (buffer.flags[0] != IS_LEAF) {
+        return RC_INVALID_ATTRIBUTE;
+    }
+    return 0;
 }
     
 /*
@@ -165,6 +175,7 @@ RC BTLeafNode::setNextNodePtr(PageId pid) {
 
 BTNonLeafNode::BTNonLeafNode(){
     buffer.numKeys = 0;
+    buffer.flags[0] = IS_NODE;
 }
 
 /*
@@ -174,7 +185,14 @@ BTNonLeafNode::BTNonLeafNode(){
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTNonLeafNode::read(PageId pid, const PageFile& pf) {
-    return pf.read(pid, (void *) &buffer);
+    RC pfRC = pf.read(pid, (void *) &buffer);
+    if (pfRC != 0) {
+        return pfRC;
+    }
+    if (buffer.flags[0] != IS_NODE) {
+        return RC_INVALID_ATTRIBUTE;
+    }
+    return 0;
 }
     
 /*
