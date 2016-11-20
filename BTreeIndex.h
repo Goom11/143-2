@@ -13,7 +13,8 @@
 #include "Bruinbase.h"
 #include "PageFile.h"
 #include "RecordFile.h"
-             
+#include "BTreeNode.h"
+
 /**
  * The data structure to point to a particular entry at a b+tree leaf node.
  * An IndexCursor consists of pid (PageId of the leaf node) and 
@@ -57,6 +58,9 @@ class BTreeIndex {
    * @return error code. 0 if no error
    */
   RC insert(int key, const RecordId& rid);
+
+  RC indexInsert(BTNonLeafNode& index, PageId pid, int key, const RecordId& rid, BTNonLeafNode& sibling, int& midKey);
+  RC leafInsert(BTLeafNode& leaf, int key, const RecordId& rid, BTLeafNode& sibling, int& siblingKey);
 
   /**
    * Run the standard B+Tree key search algorithm and identify the

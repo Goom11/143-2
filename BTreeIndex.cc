@@ -12,6 +12,8 @@
 
 using namespace std;
 
+const int RC_SPLIT = 401;
+
 /*
  * BTreeIndex constructor
  */
@@ -29,7 +31,7 @@ BTreeIndex::BTreeIndex()
  */
 RC BTreeIndex::open(const string& indexname, char mode)
 {
-    return 0;
+    return pf.open(indexname, mode);
 }
 
 /*
@@ -49,7 +51,150 @@ RC BTreeIndex::close()
  */
 RC BTreeIndex::insert(int key, const RecordId& rid)
 {
-    return 0;
+    BTLeafNode leaf;
+    BTNonLeafNode nonLeaf;
+
+    if (leaf.read(rootPid, pf) == 0) {
+        BTLeafNode sibling;
+        int siblingKey;
+        int error = leafInsert(leaf, key, rid, sibling, siblingKey);
+        int writeError;
+
+        // If there is a split
+        if (error == RC_SPLIT) {
+
+            // Write the sibling with the end pid, make sure no errors
+            int siblingPid = pf.endPid();
+            writeError = sibling.write(siblingPid, pf);
+            if (writeError != 0)
+                return writeError;
+
+            int oldRoot = rootPid;
+            writeError = leaf.write(oldRoot, pf);
+            if (writeError != 0)
+                return writeError;
+
+            // Get the next last pid, write the index with that pid
+            rootPid = pf.endPid();
+            nonLeaf.initializeRoot(oldRoot, siblingKey, siblingPid);
+            writeError = nonLeaf.write(rootPid, pf);
+
+        } else {
+            // Otherwise, write the updated leaf
+            writeError = leaf.write(rootPid, pf);
+        }
+
+        // If there is an error, return it
+        return writeError;
+
+    } else if (nonLeaf.read(rootPid, pf) == 0) {
+        BTNonLeafNode sibling;
+        int midkey;
+        int error = indexInsert(nonLeaf, rootPid, key, rid, sibling, midkey);
+
+        if (error == RC_SPLIT) {
+            int writeError;
+
+            // Write the sibling
+            int siblingPid = pf.endPid();
+            writeError = sibling.write(siblingPid, pf);
+            if (writeError != 0)
+                return writeError;
+
+            // Save oldRoot's pid, and write the new nonLeaf
+            int oldRoot = rootPid;
+            writeError = nonLeaf.write(oldRoot, pf);
+            if (writeError != 0)
+                return  writeError;
+
+            // Update rootPid and save the new root
+            rootPid = pf.endPid();
+            BTNonLeafNode root;
+            root.initializeRoot(oldRoot, midkey, siblingPid);
+            return root.write(rootPid, pf);
+        }
+
+    } else {
+        // Flag was incorrectly set, therefore must be an invalid pid
+        return RC_INVALID_PID;
+    }
+}
+
+RC BTreeIndex::indexInsert(BTNonLeafNode& index, PageId pid, int key, const RecordId& rid, BTNonLeafNode& sibling, int& midKey)
+{
+    int newPid;
+    int error;
+    error = index.locateChildPtr(key, newPid);
+    if (error != 0) {
+        return error;
+    }
+
+
+    BTLeafNode leaf;
+    BTNonLeafNode nonLeaf;
+
+    if (leaf.read(newPid, pf) == 0) {
+        BTLeafNode leafS;
+        int siblingKey;
+        error = leafInsert(leaf, key, rid, leafS, siblingKey);
+
+        // If the leaf splits, write the leaf and its sibling
+        if (error == RC_SPLIT) {
+            leaf.write(newPid, pf);
+            int siblingPid = pf.endPid();
+            leafS.write(siblingPid, pf);
+
+            int nonLeafError = index.insert(siblingKey, siblingPid);
+
+            if (nonLeafError == RC_NODE_FULL) {
+                index.insertAndSplit(siblingKey, siblingPid, sibling, midKey);
+                return RC_SPLIT;
+            } else if (nonLeafError == 0){
+                return index.write(pid, pf);
+            } else {
+                return nonLeafError;
+            }
+        }
+
+    } else if (nonLeaf.read(newPid, pf) == 0) {
+        BTNonLeafNode nonLeafSibling;
+        int siblingKey;
+        error = indexInsert(nonLeaf, newPid, key, rid, nonLeafSibling, siblingKey);
+
+        if (error == RC_SPLIT) {
+            nonLeaf.write(newPid, pf);
+            int siblingPid = pf.endPid();
+            nonLeafSibling.write(siblingPid, pf);
+
+            int nonLeafError = index.insert(siblingKey, siblingPid);
+
+            if (nonLeafError == RC_NODE_FULL) {
+                index.insertAndSplit(siblingKey, siblingPid, nonLeafSibling, midKey);
+                return RC_SPLIT;
+            } else if (nonLeafError == 0){
+                return index.write(pid, pf);
+            } else {
+                return nonLeafError;
+            }
+        }
+
+
+    } else {
+        // Flag was incorrectly set, therefore must be an invalid pid
+        return RC_INVALID_PID;
+    }
+}
+
+RC BTreeIndex::leafInsert(BTLeafNode& leaf, int key, const RecordId& rid, BTLeafNode& sibling, int& siblingKey)
+{
+    RC error = leaf.insert(key, rid);
+
+    if (error == RC_NODE_FULL) {
+        error = leaf.insertAndSplit(key, rid, sibling, siblingKey);
+        return error == 0 ? RC_SPLIT : error;
+        }
+
+    return error;
 }
 
 /**
