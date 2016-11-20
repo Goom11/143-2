@@ -10,23 +10,10 @@
 #ifndef BTREEINDEX_H
 #define BTREEINDEX_H
 
+#include "BTreeNode.h"
 #include "Bruinbase.h"
 #include "PageFile.h"
 #include "RecordFile.h"
-#include "BTreeNode.h"
-
-/**
- * The data structure to point to a particular entry at a b+tree leaf node.
- * An IndexCursor consists of pid (PageId of the leaf node) and 
- * eid (the location of the index entry inside the node).
- * IndexCursor is used for index lookup and traversal.
- */
-typedef struct {
-  // PageId of the index entry
-  PageId  pid;  
-  // The entry number inside the node
-  int     eid;  
-} IndexCursor;
 
 typedef struct {
     PageId rootPid;

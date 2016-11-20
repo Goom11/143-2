@@ -12,13 +12,25 @@
 
 #include "RecordFile.h"
 #include "PageFile.h"
-#include "BTreeIndex.h"
-
 
 const int MAX_KEY_RECORDS = 84;
 const int MAX_KEYS = 126;
 const int IS_LEAF = 0;
 const int IS_NODE = 1;
+
+
+/**
+ * The data structure to point to a particular entry at a b+tree leaf node.
+ * An IndexCursor consists of pid (PageId of the leaf node) and
+ * eid (the location of the index entry inside the node).
+ * IndexCursor is used for index lookup and traversal.
+ */
+typedef struct {
+    // PageId of the index entry
+    PageId  pid;
+    // The entry number inside the node
+    int     eid;
+} IndexCursor;
 
 typedef struct {
     int key;

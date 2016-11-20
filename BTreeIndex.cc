@@ -95,15 +95,15 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
             // Get the next last pid, write the index with that pid
             rootPid = pf.endPid();
             nonLeaf.initializeRoot(oldRoot, siblingKey, siblingPid);
-            writeError = nonLeaf.write(rootPid, pf);
+            return nonLeaf.write(rootPid, pf);
 
-        } else {
+        } else if (error == 0) {
             // Otherwise, write the updated leaf
-            writeError = leaf.write(rootPid, pf);
+            return leaf.write(rootPid, pf);
+        } else {
+            return error;
         }
 
-        // If there is an error, return it
-        return writeError;
 
     } else if (nonLeaf.read(rootPid, pf) == 0) {
         BTNonLeafNode sibling;
@@ -130,7 +130,10 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
             BTNonLeafNode root;
             root.initializeRoot(oldRoot, midkey, siblingPid);
             return root.write(rootPid, pf);
+        } else if (error == 0) {
+            return nonLeaf.write(rootPid, pf);
         }
+        return error;
 
     } else {
         // Flag was incorrectly set, therefore must be an invalid pid
@@ -167,11 +170,12 @@ RC BTreeIndex::indexInsert(BTNonLeafNode& index, PageId pid, int key, const Reco
                 index.insertAndSplit(siblingKey, siblingPid, sibling, midKey);
                 return RC_SPLIT;
             } else if (nonLeafError == 0){
-                return index.write(pid, pf);
+                return 0;
             } else {
                 return nonLeafError;
             }
         }
+        return error;
 
     } else if (nonLeaf.read(newPid, pf) == 0) {
         BTNonLeafNode nonLeafSibling;
@@ -188,13 +192,12 @@ RC BTreeIndex::indexInsert(BTNonLeafNode& index, PageId pid, int key, const Reco
                 index.insertAndSplit(siblingKey, siblingPid, sibling, midKey);
                 return RC_SPLIT;
             } else if (nonLeafError == 0){
-                return index.write(pid, pf);
+                return 0;
             } else {
                 return nonLeafError;
             }
         }
-
-
+        return error;
     } else {
         // Flag was incorrectly set, therefore must be an invalid pid
         return RC_INVALID_PID;
@@ -208,7 +211,7 @@ RC BTreeIndex::leafInsert(BTLeafNode& leaf, int key, const RecordId& rid, BTLeaf
     if (error == RC_NODE_FULL) {
         error = leaf.insertAndSplit(key, rid, sibling, siblingKey);
         return error == 0 ? RC_SPLIT : error;
-        }
+    }
 
     return error;
 }
