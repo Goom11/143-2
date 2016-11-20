@@ -29,6 +29,17 @@ BTreeIndex::BTreeIndex()
  */
 RC BTreeIndex::open(const string& indexname, char mode)
 {
+    RC pfRC = pf.open(indexname, mode);
+    if (pfRC != 0) {
+        return pfRC;
+    }
+    TreeIndexMetadata buffer;
+    pfRC = pf.read(0, (void *) &buffer);
+    if (pfRC != 0) {
+        return pfRC;
+    }
+    rootPid = buffer.rootPid;
+    treeHeight = buffer.treeHeight;
     return 0;
 }
 
@@ -38,7 +49,14 @@ RC BTreeIndex::open(const string& indexname, char mode)
  */
 RC BTreeIndex::close()
 {
-    return 0;
+    TreeIndexMetadata buffer;
+    buffer.rootPid = rootPid;
+    buffer.treeHeight = treeHeight;
+    RC pfRC = pf.write(0, (void *) &buffer);
+    if (pfRC != 0) {
+        return pfRC;
+    }
+    return pf.close();
 }
 
 /*
