@@ -163,7 +163,6 @@ RC BTreeIndex::indexInsert(BTNonLeafNode& index, PageId pid, int key, const Reco
             leafS.write(siblingPid, pf);
 
             int nonLeafError = index.insert(siblingKey, siblingPid);
-
             if (nonLeafError == RC_NODE_FULL) {
                 index.insertAndSplit(siblingKey, siblingPid, sibling, midKey);
                 return RC_SPLIT;
@@ -185,9 +184,8 @@ RC BTreeIndex::indexInsert(BTNonLeafNode& index, PageId pid, int key, const Reco
             nonLeafSibling.write(siblingPid, pf);
 
             int nonLeafError = index.insert(siblingKey, siblingPid);
-
             if (nonLeafError == RC_NODE_FULL) {
-                index.insertAndSplit(siblingKey, siblingPid, nonLeafSibling, midKey);
+                index.insertAndSplit(siblingKey, siblingPid, sibling, midKey);
                 return RC_SPLIT;
             } else if (nonLeafError == 0){
                 return index.write(pid, pf);
