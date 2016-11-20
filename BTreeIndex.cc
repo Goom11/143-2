@@ -32,17 +32,31 @@ BTreeIndex::BTreeIndex()
 RC BTreeIndex::open(const string& indexname, char mode)
 {
     RC pfRC = pf.open(indexname, mode);
-    if (pfRC != 0) {
-        return pfRC;
+
+    if (pf.endPid() == 0) {
+        TreeIndexMetadata buffer;
+        buffer.rootPid = 1;
+        buffer.treeHeight = 1;
+        int error = pf.write(0, (void *) &buffer);
+        if (error != 0)
+            return error;
+
+        rootPid = buffer.rootPid;
+        BTLeafNode leaf;
+        return leaf.write(rootPid, pf);
+    } else {
+        if (pfRC != 0) {
+            return pfRC;
+        }
+        TreeIndexMetadata buffer;
+        pfRC = pf.read(0, (void *) &buffer);
+        if (pfRC != 0) {
+            return pfRC;
+        }
+        rootPid = buffer.rootPid;
+        treeHeight = buffer.treeHeight;
+        return 0;
     }
-    TreeIndexMetadata buffer;
-    pfRC = pf.read(0, (void *) &buffer);
-    if (pfRC != 0) {
-        return pfRC;
-    }
-    rootPid = buffer.rootPid;
-    treeHeight = buffer.treeHeight;
-    return 0;
 }
 
 /*
