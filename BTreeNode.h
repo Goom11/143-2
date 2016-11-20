@@ -12,6 +12,7 @@
 
 #include "RecordFile.h"
 #include "PageFile.h"
+#include "BTreeIndex.h"
 
 
 const int MAX_KEY_RECORDS = 84;
@@ -108,6 +109,8 @@ class BTLeafNode {
     * @return the number of keys in the node
     */
     int getKeyCount();
+
+    RC getNextCursor(IndexCursor& cursor);
  
    /**
     * Read the content of the node from the page pid in the PageFile pf.

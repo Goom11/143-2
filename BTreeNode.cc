@@ -139,6 +139,15 @@ RC BTLeafNode::locate(int searchKey, int& eid) {
     return searchKey == buffer.keyRecords[eid].key && eid != getKeyCount() ? 0 : RC_NO_SUCH_RECORD;
 }
 
+RC BTLeafNode::getNextCursor(IndexCursor &cursor) {
+    cursor.eid += 1;
+    if (cursor.eid == getKeyCount()) {
+        cursor.pid = getNextNodePtr();
+        cursor.eid = 0;
+    }
+    return 0;
+}
+
 /*
  * Read the (key, rid) pair from the eid entry.
  * @param eid[IN] the entry number to read the (key, rid) pair from
