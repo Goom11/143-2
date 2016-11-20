@@ -28,6 +28,12 @@ typedef struct {
   int     eid;  
 } IndexCursor;
 
+typedef struct {
+    PageId rootPid;
+    int treeHeight;
+    int flags[1016];
+} TreeIndexMetadata;
+
 /**
  * Implements a B-Tree index for bruinbase.
  * 
@@ -81,6 +87,7 @@ class BTreeIndex {
    * @return 0 if searchKey is found. Othewise, an error code
    */
   RC locate(int searchKey, IndexCursor& cursor);
+  RC locateFull(int searchKey, IndexCursor& cursor, PageId curPid);
 
   /**
    * Read the (key, rid) pair at the location specified by the index cursor,

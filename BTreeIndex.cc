@@ -31,7 +31,18 @@ BTreeIndex::BTreeIndex()
  */
 RC BTreeIndex::open(const string& indexname, char mode)
 {
-    return pf.open(indexname, mode);
+    RC pfRC = pf.open(indexname, mode);
+    if (pfRC != 0) {
+        return pfRC;
+    }
+    TreeIndexMetadata buffer;
+    pfRC = pf.read(0, (void *) &buffer);
+    if (pfRC != 0) {
+        return pfRC;
+    }
+    rootPid = buffer.rootPid;
+    treeHeight = buffer.treeHeight;
+    return 0;
 }
 
 /*
@@ -40,7 +51,14 @@ RC BTreeIndex::open(const string& indexname, char mode)
  */
 RC BTreeIndex::close()
 {
-    return 0;
+    TreeIndexMetadata buffer;
+    buffer.rootPid = rootPid;
+    buffer.treeHeight = treeHeight;
+    RC pfRC = pf.write(0, (void *) &buffer);
+    if (pfRC != 0) {
+        return pfRC;
+    }
+    return pf.close();
 }
 
 /*
@@ -217,7 +235,22 @@ RC BTreeIndex::leafInsert(BTLeafNode& leaf, int key, const RecordId& rid, BTLeaf
  */
 RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
 {
-    return 0;
+    return locateFull(searchKey, cursor, rootPid);
+}
+
+RC BTreeIndex::locateFull(int searchKey, IndexCursor& cursor, PageId curPid) {
+    BTLeafNode leaf;
+    BTNonLeafNode node;
+
+    if (leaf.read(curPid, pf) == 0) {
+        cursor.pid = curPid;
+        return leaf.locate(searchKey, cursor.eid);
+    } else if (node.read(curPid, pf) == 0) {
+        PageId nextPid;
+        node.locateChildPtr(searchKey, nextPid);
+        return locateFull(searchKey, cursor, nextPid);
+    }
+    return RC_INVALID_PID;
 }
 
 /*
