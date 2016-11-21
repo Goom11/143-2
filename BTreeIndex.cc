@@ -101,6 +101,8 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
             if (writeError != 0)
                 return writeError;
 
+            sibling.setNextNodePtr(leaf.getNextNodePtr());
+            leaf.setNextNodePtr(siblingPid);
             int oldRoot = rootPid;
             writeError = leaf.write(oldRoot, pf);
             if (writeError != 0)
@@ -178,6 +180,8 @@ RC BTreeIndex::indexInsert(BTNonLeafNode& index, PageId pid, int key, const Reco
             leaf.write(newPid, pf);
             int siblingPid = pf.endPid();
             leafS.write(siblingPid, pf);
+            leafS.setNextNodePtr(leaf.getNextNodePtr());
+            leaf.setNextNodePtr(siblingPid);
 
             int nonLeafError = index.insert(siblingKey, siblingPid);
             if (nonLeafError == RC_NODE_FULL) {
