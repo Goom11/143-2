@@ -188,6 +188,9 @@ RC BTreeIndex::indexInsert(BTNonLeafNode& index, PageId pid, int key, const Reco
             } else {
                 return nonLeafError;
             }
+        } else if (error == 0) {
+            leaf.write(newPid, pf);
+            return 0;
         }
         return error;
 
