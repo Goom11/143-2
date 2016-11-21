@@ -138,10 +138,6 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
     ifstream tableFile(loadfile.c_str());
 
 
-    BTreeIndex bti;
-    if (index) {
-        bti.open(table + ".idx", 'w');
-    }
 
     if (tableFile.is_open())
     {
@@ -158,10 +154,6 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
             if (resVal == 0) {
                 RecordId rid;
                 rf.append(key, value, rid);
-
-                if (index) {
-                    bti.insert(key, rid);
-                }
 
             } else {
                 cout << "Error code: " << resVal << endl;
