@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
+#include <climits>
 #include <iostream>
 #include <fstream>
 #include "Bruinbase.h"
@@ -50,6 +51,121 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
   if ((rc = rf.open(table + ".tbl", 'r')) < 0) {
     fprintf(stderr, "Error: table %s does not exist\n", table.c_str());
     return rc;
+  }
+
+
+
+    // If the tree index
+  BTreeIndex bti;
+  if (bti.open(table + ".idx", 'r') == 0) {
+      count = 0;
+
+      // Get the minimum value to search for initially in the tree
+      int minVal = INT_MIN;
+      for (int i = 0; i < cond.size(); i++) {
+          if (cond[i].attr == 1 && (cond[i].comp == SelCond::EQ ||
+                                    cond[i].comp == SelCond::GT ||
+                                    cond[i].comp == SelCond::GE)) {
+              if (minVal < atoi(cond[i].value))
+                  minVal = atoi(cond[i].value);
+          }
+
+      }
+
+      // Locate the minVal
+      IndexCursor cursor;
+      bti.locate(minVal, cursor);
+      bool readmore = true;
+      bool printOrCount = true;
+
+      while (readmore) {
+
+          readmore = true;
+          printOrCount = true;
+
+          // read the tuple
+          rc = bti.readForward(cursor, key, rid);
+          if ((rc < 0)) {
+              if (rc == RC_END_OF_TREE) {
+                  goto exit_select;
+              }
+
+              fprintf(stderr, "Error: while reading a tuple from table %s\n", table.c_str());
+              goto exit_select;
+          }
+          else if ((rc = rf.read(rid, key, value)) < 0) {
+              fprintf(stderr, "Error: while reading a tuple from table %s\n", table.c_str());
+              goto exit_select;
+          }
+
+          // check the conditions on the tuple
+          for (unsigned i = 0; i < cond.size(); i++) {
+              // compute the difference between the tuple value and the condition value
+              switch (cond[i].attr) {
+                  case 1:
+                      diff = key - atoi(cond[i].value);
+                      break;
+                  case 2:
+                      diff = strcmp(value.c_str(), cond[i].value);
+                      break;
+              }
+
+              // skip the tuple if any condition is not met
+              switch (cond[i].comp) {
+                  case SelCond::EQ:
+                      if (diff != 0) {
+                          readmore = false;
+                          printOrCount = false;
+                      }
+                      break;
+                  case SelCond::NE:
+                      if (diff == 0)
+                          printOrCount = false;
+                      break;
+                  case SelCond::GT:
+                      if (diff <= 0)
+                          printOrCount = false;
+                      break;
+                  case SelCond::LT:
+                      if (diff >= 0) {
+                          readmore = false;
+                          printOrCount = false;
+                      }
+                      break;
+                  case SelCond::GE:
+                      if (diff < 0)
+                          printOrCount = false;
+                      break;
+                  case SelCond::LE:
+                      if (diff >= 0) {
+                          readmore = false;
+                          printOrCount = false;
+                      }
+                      break;
+              }
+          }
+
+          if (printOrCount) {
+              // the condition is met for the tuple.
+              // increase matching tuple counter
+              count++;
+
+              // print the tuple if it needs to be printed
+              switch (attr) {
+                  case 1:  // SELECT key
+                      fprintf(stdout, "%d\n", key);
+                      break;
+                  case 2:  // SELECT value
+                      fprintf(stdout, "%s\n", value.c_str());
+                      break;
+                  case 3:  // SELECT *
+                      fprintf(stdout, "%d '%s'\n", key, value.c_str());
+                      break;
+              }
+          }
+      }
+
+      goto exit_select;
   }
 
   // scan the table file from the beginning
@@ -138,6 +254,10 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
     ifstream tableFile(loadfile.c_str());
 
 
+    BTreeIndex bti;
+    if (index) {
+        bti.open(table + ".idx", 'w');
+    }
 
     if (tableFile.is_open())
     {
@@ -154,6 +274,9 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
             if (resVal == 0) {
                 RecordId rid;
                 rf.append(key, value, rid);
+                if (index) {
+                    bti.insert(key, rid);
+                }
 
             } else {
                 cout << "Error code: " << resVal << endl;
@@ -162,6 +285,10 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
 
         }
         tableFile.close();
+
+        if (index) {
+            bti.close();
+        }
     }
     else {
         cout << "Error loading from file: " << loadfile << endl;

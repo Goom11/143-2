@@ -177,11 +177,11 @@ RC BTreeIndex::indexInsert(BTNonLeafNode& index, PageId pid, int key, const Reco
 
         // If the leaf splits, write the leaf and its sibling
         if (error == RC_SPLIT) {
-            leaf.write(newPid, pf);
             int siblingPid = pf.endPid();
-            leafS.write(siblingPid, pf);
             leafS.setNextNodePtr(leaf.getNextNodePtr());
             leaf.setNextNodePtr(siblingPid);
+            leafS.write(siblingPid, pf);
+            leaf.write(newPid, pf);
 
             int nonLeafError = index.insert(siblingKey, siblingPid);
             if (nonLeafError == RC_NODE_FULL) {
