@@ -87,6 +87,9 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
           rc = bti.readForward(cursor, key, rid);
           if ((rc < 0)) {
               if (rc == RC_END_OF_TREE) {
+                  if (attr == 4) {
+                      goto print_count;
+                  }
                   goto exit_select;
               }
 
@@ -235,16 +238,17 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
     ++rid;
   }
 
-  // print matching tuple count if "select count(*)"
-  if (attr == 4) {
-    fprintf(stdout, "%d\n", count);
-  }
-  rc = 0;
+    print_count:
+    // print matching tuple count if "select count(*)"
+    if (attr == 4) {
+        fprintf(stdout, "%d\n", count);
+    }
+    rc = 0;
 
-  // close the table file and return
-  exit_select:
-  rf.close();
-  return rc;
+    // close the table file and return
+    exit_select:
+    rf.close();
+    return rc;
 }
 
 RC SqlEngine::load(const string& table, const string& loadfile, bool index)
