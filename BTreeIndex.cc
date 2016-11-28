@@ -285,6 +285,9 @@ RC BTreeIndex::locateFull(int searchKey, IndexCursor& cursor, PageId curPid) {
  */
 RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
 {
+    if (cursor.pid == -1) {
+        return RC_END_OF_TREE;
+    }
     BTLeafNode leaf;
     RC leafRC = leaf.read(cursor.pid, pf);
     if (leafRC != 0) {
@@ -295,8 +298,5 @@ RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
         return leafRC;
     }
     leafRC = leaf.getNextCursor(cursor);
-    if (cursor.pid == -1) {
-        return RC_END_OF_TREE;
-    }
     return leafRC;
 }
