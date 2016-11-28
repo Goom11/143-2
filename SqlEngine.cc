@@ -82,6 +82,7 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
 
           readmore = true;
           printOrCount = true;
+          bool valueSetForThisRow = false;
 
           // read the tuple
           rc = bti.readForward(cursor, key, rid);
@@ -96,10 +97,6 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
               fprintf(stderr, "Error: while reading a tuple from table %s\n", table.c_str());
               goto exit_select;
           }
-          else if ((rc = rf.read(rid, key, value)) < 0) {
-              fprintf(stderr, "Error: while reading a tuple from table %s\n", table.c_str());
-              goto exit_select;
-          }
 
           // check the conditions on the tuple
           for (unsigned i = 0; i < cond.size(); i++) {
@@ -109,6 +106,14 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
                       diff = key - atoi(cond[i].value);
                       break;
                   case 2:
+                      if (!valueSetForThisRow) {
+                          if ((rc = rf.read(rid, key, value)) < 0) {
+                              fprintf(stderr, "Error: while reading a tuple from table %s\n", table.c_str());
+                              goto exit_select;
+                          }
+                          valueSetForThisRow = true;
+                      }
+
                       diff = strcmp(value.c_str(), cond[i].value);
                       break;
               }
@@ -159,9 +164,25 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
                       fprintf(stdout, "%d\n", key);
                       break;
                   case 2:  // SELECT value
+                      if (!valueSetForThisRow) {
+                          if ((rc = rf.read(rid, key, value)) < 0) {
+                              fprintf(stderr, "Error: while reading a tuple from table %s\n", table.c_str());
+                              goto exit_select;
+                          }
+                          valueSetForThisRow = true;
+                      }
+
                       fprintf(stdout, "%s\n", value.c_str());
                       break;
                   case 3:  // SELECT *
+                      if (!valueSetForThisRow) {
+                          if ((rc = rf.read(rid, key, value)) < 0) {
+                              fprintf(stderr, "Error: while reading a tuple from table %s\n", table.c_str());
+                              goto exit_select;
+                          }
+                          valueSetForThisRow = true;
+                      }
+
                       fprintf(stdout, "%d '%s'\n", key, value.c_str());
                       break;
               }
