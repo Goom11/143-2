@@ -76,12 +76,11 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
       IndexCursor cursor;
       bti.locate(minVal, cursor);
       bool readmore = true;
-      bool printOrCount = true;
 
       while (readmore) {
 
           readmore = true;
-          printOrCount = true;
+          bool printOrCount = true;
           bool valueSetForThisRow = false;
 
           // read the tuple
