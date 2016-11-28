@@ -121,7 +121,9 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
               switch (cond[i].comp) {
                   case SelCond::EQ:
                       if (diff != 0) {
-                          readmore = false;
+                          if (cond[i].attr == 1) {
+                              readmore = false;
+                          }
                           printOrCount = false;
                       }
                       break;
@@ -135,7 +137,9 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
                       break;
                   case SelCond::LT:
                       if (diff >= 0) {
-                          readmore = false;
+                          if (cond[i].attr == 1) {
+                              readmore = false;
+                          }
                           printOrCount = false;
                       }
                       break;
@@ -145,7 +149,9 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
                       break;
                   case SelCond::LE:
                       if (diff >= 0) {
-                          readmore = false;
+                          if (cond[i].attr == 1) {
+                              readmore = false;
+                          }
                           printOrCount = false;
                       }
                       break;
